@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Portrait Tester v4</title>
+<meta name="theme-color" content="#06060c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AI Portrait">
+<link rel="manifest" href="data:application/json,{%22name%22:%22AI%20Portrait%20Studio%22,%22short_name%22:%22AI%20Portrait%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%2306060c%22,%22theme_color%22:%22%23f5c518%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%2306060c'/><text y='.9em' font-size='90'>✨</text></svg>%22,%22sizes%22:%22any%22,%22type%22:%22image/svg+xml%22}]}">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#06060c;--card:#11111c;--border:#1e1e30;--gold:#f5c518;--cyan:#00d4ff;--green:#00e676;--red:#ff4444;--text:#eeeef8;--muted:#55557a;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;min-height:100vh;padding-bottom:60px;}
+.hdr{padding:22px 32px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:3px;background:linear-gradient(135deg,var(--gold),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.sub{font-size:12px;color:var(--muted);}
+.badge{margin-left:auto;background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);color:var(--green);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;padding:4px 12px;border-radius:20px;}
+.wrap{max-width:900px;margin:0 auto;padding:24px 20px;display:flex;flex-direction:column;gap:16px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.card-hdr{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.card-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.card-title{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:1px;}
+.card-tag{margin-left:auto;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;padding:3px 8px;border-radius:8px;}
+.card-body{padding:16px 18px;}
+
+/* API KEY */
+.key-row{display:flex;gap:8px;}
+.key-inp{flex:1;background:#080810;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:11px 14px;font-family:'DM Mono',monospace;font-size:12px;outline:none;transition:border-color .2s;}
+.key-inp:focus{border-color:var(--gold);}
+.key-inp::placeholder{color:var(--muted);}
+.key-toggle{background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:0 14px;cursor:pointer;font-size:12px;color:var(--muted);white-space:nowrap;transition:all .2s;}
+.key-toggle:hover{color:var(--text);}
+.key-saved{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;font-family:'DM Mono',monospace;}
+.key-hint{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6;}
+.key-hint a{color:var(--cyan);text-decoration:none;}
+
+/* MODE */
+.mode-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mode-btn{padding:14px 10px;border-radius:10px;border:1px solid var(--border);background:transparent;cursor:pointer;transition:all .2s;text-align:center;}
+.mode-btn.active{border-color:var(--gold);background:rgba(245,197,24,.07);}
+.mode-btn:hover:not(.active){border-color:rgba(255,255,255,.15);}
+.mode-emoji{font-size:24px;margin-bottom:6px;}
+.mode-label{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;}
+.mode-desc{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* UPLOADS — fixed */
+.uploads-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.upload-wrap{display:flex;flex-direction:column;gap:8px;}
+.upload-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;}
+.upload-btn{background:rgba(255,255,255,.05);border:1.5px dashed var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted);}
+.upload-btn:hover{border-color:var(--gold);background:rgba(245,197,24,.04);color:var(--text);}
+.upload-btn.filled{border-style:solid;border-color:var(--green);background:rgba(0,230,118,.04);color:var(--text);}
+.upload-btn-icon{font-size:22px;flex-shrink:0;}
+.upload-btn-text{flex:1;text-align:left;}
+.upload-btn-text .main{font-weight:500;margin-bottom:2px;}
+.upload-btn-text .hint{font-size:11px;color:var(--muted);}
+.upload-btn-clear{background:rgba(255,68,68,.15);border:1px solid rgba(255,68,68,.3);color:var(--red);padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;flex-shrink:0;transition:all .2s;}
+.upload-btn-clear:hover{background:rgba(255,68,68,.3);}
+.upload-preview{width:100%;height:160px;object-fit:cover;border-radius:10px;display:none;border:1px solid var(--border);}
+
+/* POSE */
+.pose-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.pose-btn{padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;transition:all .2s;text-align:center;}
+.pose-btn.active{border-color:#7c5cfc;background:rgba(124,92,252,.12);}
+.pose-btn:hover:not(.active){border-color:rgba(255,255,255,.15);}
+.pose-svg-wrap{width:36px;height:44px;margin:0 auto 4px;color:var(--muted);}
+.pose-btn.active .pose-svg-wrap{color:#a78bfa;}
+.pose-name{font-size:9px;font-family:'DM Mono',monospace;color:var(--muted);line-height:1.3;}
+.pose-btn.active .pose-name{color:#a78bfa;}
+
+/* GENERATE */
+.gen-btn{width:100%;padding:16px;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;cursor:pointer;border:none;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px;}
+.gen-btn:not(:disabled){background:linear-gradient(135deg,var(--gold),#d4a017);color:#000;}
+.gen-btn:not(:disabled):hover{transform:translateY(-1px);box-shadow:0 8px 28px rgba(245,197,24,.35);}
+.gen-btn:disabled{background:var(--card);color:var(--muted);cursor:not-allowed;border:1px solid var(--border);}
+
+/* STATUS */
+.prog{display:none;margin-bottom:12px;}
+.prog.show{display:block;}
+.prog-bar{background:var(--border);height:5px;border-radius:4px;overflow:hidden;margin-bottom:6px;}
+.prog-fill{height:100%;background:linear-gradient(90deg,#7c5cfc,var(--cyan));border-radius:4px;transition:width .4s ease;width:0%;}
+.prog-lbl{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;text-align:center;}
+.log-box{background:#040408;border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-family:'DM Mono',monospace;font-size:12px;min-height:50px;max-height:160px;overflow-y:auto;line-height:1.9;}
+.ll{display:flex;gap:8px;}
+.ll .ts{color:var(--muted);flex-shrink:0;}
+.ll.info .msg{color:var(--cyan);}
+.ll.ok .msg{color:var(--green);}
+.ll.err .msg{color:var(--red);}
+.ll.warn .msg{color:var(--gold);}
+.ll.dim .msg{color:var(--muted);}
+
+/* RESULT */
+.result-empty{border:1.5px dashed var(--border);border-radius:14px;padding:48px 24px;text-align:center;}
+.re-emoji{font-size:40px;opacity:.25;margin-bottom:12px;}
+.re-title{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--muted);margin-bottom:8px;}
+.re-sub{font-size:13px;color:var(--muted);font-weight:300;line-height:1.7;}
+.result-card{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--card);margin-bottom:16px;}
+.rc-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.rc-num{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
+.rc-mode{padding:3px 10px;border-radius:20px;font-size:10px;font-family:'DM Mono',monospace;}
+.rc-actions{margin-left:auto;display:flex;gap:8px;}
+.rc-btn{background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--text);text-decoration:none;transition:all .2s;}
+.rc-btn:hover{background:rgba(255,255,255,.12);}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);}
+.compare-side{position:relative;background:var(--bg);}
+.compare-side img{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;}
+.compare-lbl{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);padding:3px 10px;border-radius:20px;font-size:10px;font-family:'DM Mono',monospace;}
+
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+
+/* hidden file inputs */
+#inp-person, #inp-outfit{display:none;}
+
+/* Mobile optimizations */
+@media(max-width:600px){
+  .hdr{padding:16px 18px;}
+  .logo{font-size:22px;}
+  .wrap{padding:16px 12px;gap:14px;}
+  .card-body{padding:14px 14px;}
+  .mode-row{grid-template-columns:1fr 1fr;}
+  .uploads-row{grid-template-columns:1fr 1fr;}
+  .pose-grid{grid-template-columns:repeat(4,1fr);}
+  .gen-btn{font-size:18px;padding:14px;}
+  .compare{grid-template-columns:1fr 1fr;}
+  .upload-preview{height:120px;}
+}
+/* Install banner */
+.install-bar{display:none;background:linear-gradient(135deg,rgba(245,197,24,.15),rgba(0,212,255,.1));border:1px solid rgba(245,197,24,.3);border-radius:12px;padding:12px 16px;margin-bottom:4px;align-items:center;gap:12px;}
+.install-bar.show{display:flex;}
+.install-bar-text{flex:1;font-size:13px;color:var(--text);}
+.install-bar-text strong{color:var(--gold);}
+.install-bar-btn{background:var(--gold);color:#000;border:none;border-radius:8px;padding:8px 16px;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;}
+.install-bar-close{color:var(--muted);background:none;border:none;cursor:pointer;font-size:18px;padding:0 4px;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div>
+    <div class="logo">AI Portrait Studio</div>
+    <div class="sub">Fashion modeling + Sports portraits tester</div>
+  </div>
+  <div class="badge">v4 — Fixed</div>
+</div>
+
+<div class="wrap"><div class="install-bar" id="installBar">
+  <span style="font-size:22px;">📱</span>
+  <span class="install-bar-text"><strong>Install karo!</strong> Home screen pe add karo — app ki tarah kaam karega</span>
+  <button class="install-bar-btn" onclick="installApp()">Install</button>
+  <button class="install-bar-close" onclick="closeInstall()">×</button>
+</div>
+
+  <!-- STEP 1: API KEY -->
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-icon" style="background:rgba(245,197,24,.1);">🔑</div>
+      <div class="card-title">Replicate API Key</div>
+      <div class="card-tag" style="background:rgba(245,197,24,.1);color:var(--gold);">Step 1 — Auto Saved</div>
+    </div>
+    <div class="card-body">
+      <div class="key-row">
+        <input class="key-inp" id="apiKey" type="password" placeholder="r8_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" oninput="onKeyInput()">
+        <button class="key-toggle" onclick="toggleKeyVis()">👁 Show</button>
+      </div>
+      <div class="key-saved" id="keySaved" style="display:none;">
+        <span style="color:var(--green);">✓ Saved — next time automatically load hogi</span>
+      </div>
+      <div class="key-hint">
+        Key nahi hai? → <a href="https://replicate.com/account/api-tokens" target="_blank">replicate.com/account/api-tokens</a> → Create token → Paste here
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: MODE -->
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-icon" style="background:rgba(0,212,255,.1);">🎯</div>
+      <div class="card-title">Mode</div>
+      <div class="card-tag" style="background:rgba(0,212,255,.1);color:var(--cyan);">Step 2</div>
+    </div>
+    <div class="card-body">
+      <div class="mode-row">
+        <button class="mode-btn active" id="mode-fashion" onclick="setMode('fashion')">
+          <div class="mode-emoji">👗</div>
+          <div class="mode-label">Fashion</div>
+          <div class="mode-desc">Kapde ki modeling</div>
+        </button>
+        <button class="mode-btn" id="mode-sports" onclick="setMode('sports')">
+          <div class="mode-emoji">🏏</div>
+          <div class="mode-label">Sports</div>
+          <div class="mode-desc">Jersey portraits</div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: PHOTOS -->
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-icon" style="background:rgba(0,230,118,.1);">📸</div>
+      <div class="card-title">Photos</div>
+      <div class="card-tag" style="background:rgba(0,230,118,.1);color:var(--green);">Step 3</div>
+    </div>
+    <div class="card-body">
+      <div class="uploads-row">
+
+        <!-- Person -->
+        <div class="upload-wrap">
+          <div class="upload-label">Person Photo</div>
+          <button class="upload-btn" id="btn-person" onclick="document.getElementById('inp-person').click()">
+            <span class="upload-btn-icon" id="icon-person">🙍</span>
+            <span class="upload-btn-text">
+              <div class="main" id="main-person">Photo choose karo</div>
+              <div class="hint">Saamne se, saaf chehra</div>
+            </span>
+          </button>
+          <button class="upload-btn-clear" id="clear-person" style="display:none;" onclick="clearFile('person')">× Hatao</button>
+          <img id="prev-person" class="upload-preview">
+          <input type="file" id="inp-person" accept="image/*" onchange="handleFile('person',this)">
+        </div>
+
+        <!-- Outfit -->
+        <div class="upload-wrap">
+          <div class="upload-label" id="outfit-label-text">Outfit / Dress</div>
+          <button class="upload-btn" id="btn-outfit" onclick="document.getElementById('inp-outfit').click()">
+            <span class="upload-btn-icon" id="icon-outfit">👗</span>
+            <span class="upload-btn-text">
+              <div class="main" id="main-outfit">Photo choose karo</div>
+              <div class="hint" id="hint-outfit">Flat lay ya mannequin</div>
+            </span>
+          </button>
+          <button class="upload-btn-clear" id="clear-outfit" style="display:none;" onclick="clearFile('outfit')">× Hatao</button>
+          <img id="prev-outfit" class="upload-preview">
+          <input type="file" id="inp-outfit" accept="image/*" onchange="handleFile('outfit',this)">
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: POSE -->
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-icon" style="background:rgba(124,92,252,.1);">🧍</div>
+      <div class="card-title">Pose</div>
+      <div class="card-tag" style="background:rgba(124,92,252,.1);color:#a78bfa;">Step 4</div>
+    </div>
+    <div class="card-body">
+      <div class="pose-grid" id="poseGrid"></div>
+    </div>
+  </div>
+
+  <!-- GENERATE -->
+  <button class="gen-btn" id="genBtn" onclick="generate()" disabled>
+    <span id="genTxt">⚡ GENERATE PORTRAIT</span>
+  </button>
+
+  <!-- STATUS -->
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-icon" style="background:rgba(0,212,255,.08);">📡</div>
+      <div class="card-title">Live Status</div>
+    </div>
+    <div class="card-body" style="padding:12px 14px;">
+      <div class="prog" id="progWrap">
+        <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+        <div class="prog-lbl" id="progLbl"></div>
+      </div>
+      <div class="log-box" id="logBox">
+        <div class="ll dim"><span class="ts">--:--</span><span class="msg">Ready. Steps 1–4 complete karo phir Generate dabao.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="resultEmpty" class="result-empty">
+    <div class="re-emoji">✨</div>
+    <div class="re-title">Result yahan aayega</div>
+    <div class="re-sub">Person photo + outfit/jersey upload karo → pose chuno → Generate dabao.<br>30–90 seconds mein AI portrait ready hoga.</div>
+  </div>
+  <div id="resultCards"></div>
+
+</div>
+
+<script>
+const POSES = {
+  fashion:[
+    {id:'f_front',   n:'Front',     p:'Standing directly facing camera, arms relaxed at sides. Professional fashion editorial pose. Full outfit clearly visible.'},
+    {id:'f_3q',      n:'3/4 Turn',  p:'Body at 3/4 angle, head turned toward lens. Classic fashion magazine pose.'},
+    {id:'f_hip',     n:'Hand Hip',  p:'One hand on hip confidently. Stylish fashion editorial. Cool relaxed expression.'},
+    {id:'f_cross',   n:'Arms X',    p:'Arms crossed confidently over chest. Strong powerful fashion pose. Direct gaze.'},
+    {id:'f_lean',    n:'Lean',      p:'Casually leaning to one side. Relaxed editorial fashion pose.'},
+    {id:'f_walk',    n:'Walk',      p:'Walking pose mid-stride. Dynamic movement. Runway walk style.'},
+    {id:'f_back',    n:'Back View', p:'Facing away from camera showing back of outfit. Slightly looking over shoulder.'},
+    {id:'f_sit',     n:'Sitting',   p:'Sitting pose, lifestyle fashion. Relaxed natural position showing full outfit.'},
+  ],
+  sports:[
+    {id:'s_studio',  n:'Studio',    p:'Standing upright, confident studio portrait. Arms relaxed. Direct camera gaze. Classic sports media day.'},
+    {id:'s_captain', n:'Captain',   p:'Arms firmly crossed over chest. Commanding stance. Chin slightly raised. Leadership pose.'},
+    {id:'s_bat',     n:'Batting',   p:'Cricket batting stance. Bat at ready position. Knees bent, body at 45 degrees, head toward camera.'},
+    {id:'s_celebrate',n:'Celebrate',p:'Arms raised high in triumph. Big smile, victorious energetic pose.'},
+    {id:'s_bowl',    n:'Bowling',   p:'Dynamic bowling action. Arm raised high in delivery. Intense focused expression.'},
+    {id:'s_field',   n:'Fielding',  p:'Athletic fielding stance. Low crouch, hands ready forward. Alert expression.'},
+    {id:'s_cool',    n:'Casual',    p:'One hand on hip, relaxed confident pose. Cool expression, slight lean.'},
+    {id:'s_jump',    n:'Jump',      p:'Dynamic jump mid-air. Arms spread, legs bent. Energetic triumphant jump.'},
+  ]
+};
+
+const SVG = `<svg viewBox="0 0 50 70" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:36px;height:44px"><circle cx="25" cy="10" r="8" stroke="currentColor" stroke-width="2.5" fill="none"/><line x1="25" y1="18" x2="25" y2="48" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="25" y1="29" x2="11" y2="41" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="25" y1="29" x2="39" y2="41" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="25" y1="48" x2="17" y2="66" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="25" y1="48" x2="33" y2="66" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>`;
+
+const S = {mode:'fashion', pose:'f_front', personB64:null, outfitB64:null, running:false, count:0};
+
+// ── INIT ─────────────────────────────────────────────────────────
+window.onload = function(){
+  // Load saved API key
+  const saved = localStorage.getItem('replicate_api_key');
+  if(saved){
+    document.getElementById('apiKey').value = saved;
+    document.getElementById('keySaved').style.display = 'flex';
+    checkReady();
+  }
+  renderPoses('fashion');
+};
+
+// ── API KEY ───────────────────────────────────────────────────────
+function onKeyInput(){
+  const v = document.getElementById('apiKey').value.trim();
+  if(v.startsWith('r8_') && v.length > 10){
+    localStorage.setItem('replicate_api_key', v);
+    document.getElementById('keySaved').style.display = 'flex';
+  }
+  checkReady();
+}
+
+function toggleKeyVis(){
+  const inp = document.getElementById('apiKey');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+// ── MODE ──────────────────────────────────────────────────────────
+function setMode(m){
+  S.mode = m;
+  ['fashion','sports'].forEach(x => document.getElementById('mode-'+x).classList.toggle('active', x===m));
+  const isF = m === 'fashion';
+  document.getElementById('outfit-label-text').textContent = isF ? 'Outfit / Dress' : 'Jersey / Kit';
+  document.getElementById('icon-outfit').textContent = isF ? '👗' : '👕';
+  S.pose = isF ? 'f_front' : 's_studio';
+  renderPoses(m);
+  checkReady();
+}
+
+// ── POSES ─────────────────────────────────────────────────────────
+function renderPoses(mode){
+  document.getElementById('poseGrid').innerHTML = POSES[mode].map(p =>
+    `<button class="pose-btn ${S.pose===p.id?'active':''}" id="pb-${p.id}" onclick="setPose('${p.id}')">
+      <div class="pose-svg-wrap">${SVG}</div>
+      <div class="pose-name">${p.n}</div>
+    </button>`
+  ).join('');
+}
+
+function setPose(id){
+  S.pose = id;
+  document.querySelectorAll('.pose-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('pb-'+id);
+  if(btn) btn.classList.add('active');
+}
+
+// ── FILE UPLOAD ───────────────────────────────────────────────────
+function handleFile(type, inp){
+  const file = inp.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const b64 = e.target.result;
+    // Show preview
+    const prev = document.getElementById('prev-'+type);
+    prev.src = b64;
+    prev.style.display = 'block';
+    // Update button
+    document.getElementById('btn-'+type).classList.add('filled');
+    document.getElementById('icon-'+type).textContent = '✅';
+    document.getElementById('main-'+type).textContent = file.name.length > 20 ? file.name.slice(0,20)+'...' : file.name;
+    document.getElementById('clear-'+type).style.display = 'inline-flex';
+    // Save data
+    if(type === 'person') S.personB64 = b64;
+    else S.outfitB64 = b64;
+    checkReady();
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearFile(type){
+  document.getElementById('prev-'+type).style.display = 'none';
+  document.getElementById('prev-'+type).src = '';
+  document.getElementById('btn-'+type).classList.remove('filled');
+  document.getElementById('icon-'+type).textContent = type==='person' ? '🙍' : (S.mode==='fashion' ? '👗' : '👕');
+  document.getElementById('main-'+type).textContent = 'Photo choose karo';
+  document.getElementById('clear-'+type).style.display = 'none';
+  document.getElementById('inp-'+type).value = '';
+  if(type === 'person') S.personB64 = null;
+  else S.outfitB64 = null;
+  checkReady();
+}
+
+function checkReady(){
+  const key = document.getElementById('apiKey').value.trim();
+  document.getElementById('genBtn').disabled = !(key.startsWith('r8_') && S.personB64 && S.outfitB64 && !S.running);
+}
+
+// ── LOG ───────────────────────────────────────────────────────────
+function log(msg, type='info'){
+  const box = document.getElementById('logBox');
+  const now = new Date();
+  const ts = [now.getHours(),now.getMinutes(),now.getSeconds()].map(x=>x.toString().padStart(2,'0')).join(':');
+  const line = document.createElement('div');
+  line.className = 'll ' + type;
+  line.innerHTML = `<span class="ts">${ts}</span><span class="msg">${msg}</span>`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+function setProgress(pct, label){
+  document.getElementById('progWrap').classList.add('show');
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progLbl').textContent = label;
+}
+
+// ── GENERATE ──────────────────────────────────────────────────────
+async function generate(){
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if(!apiKey || !S.personB64 || !S.outfitB64) return;
+
+  S.running = true;
+  checkReady();
+  document.getElementById('genTxt').textContent = '⏳ GENERATING...';
+  document.getElementById('resultEmpty').style.display = 'none';
+
+  const pose = POSES[S.mode].find(p => p.id === S.pose) || POSES[S.mode][0];
+  const prompt = S.mode === 'fashion'
+    ? `A professional high-quality studio fashion model photograph. Preserve the original person's facial identity exactly — same face, features, skin tone. Apply the exact outfit, clothing, colors and style from the reference image. ${pose.p} Professional fashion lighting. Clean studio background. Sharp focus, commercial quality.`
+    : `A professional studio sports portrait photograph. Preserve the original player's face exactly — same features, skin tone. Apply the exact jersey design, colors, pattern from the reference image. ${pose.p} Sports media day photography. Clean background. Sharp focus, high detail.`;
+
+  try {
+    log('API request bhej raha hoon...', 'info');
+    setProgress(15, 'Sending to Replicate...');
+
+    // Direct fetch — works from localhost
+    const res = await fetch('http://localhost:3002/https://api.replicate.com/v1/predictions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        version: '2e4785a4d80dadf580077b2244c8d7c05d8e3faac04a04c02d8e099dd2876789',
+        input: {
+          prompt,
+          negative_prompt: 'wrong face, different person, deformed anatomy, blurry face, low quality, watermark, extra limbs, bad hands',
+          image: S.personB64,
+          num_outputs: 1,
+          guidance_scale: 7.5,
+          num_inference_steps: 35
+        }
+      })
+    });
+
+    if(!res.ok){
+      const err = await res.json().catch(() => ({}));
+      throw new Error(`API Error ${res.status}: ${err.detail || res.statusText}`);
+    }
+
+    const prediction = await res.json();
+    log(`Started: ${prediction.id}`, 'ok');
+    log('AI generate kar raha hai... (30-90 sec)', 'warn');
+    setProgress(35, 'AI processing...');
+
+    // Poll
+    for(let i = 0; i < 60; i++){
+      await new Promise(r => setTimeout(r, 3000));
+      const poll = await fetch(`http://localhost:3002/https://api.replicate.com/v1/predictions/${prediction.id}`, {
+        headers: { 'Authorization': `Token ${apiKey}` }
+      }).then(r => r.json());
+
+      setProgress(Math.min(92, 35 + i*1.5), `Processing... ${(i+1)*3}s`);
+      if(i % 5 === 0) log(`Status: ${poll.status} (${(i+1)*3}s)`, 'dim');
+
+      if(poll.status === 'succeeded'){
+        const url = Array.isArray(poll.output) ? poll.output[0] : poll.output;
+        log('Portrait ready! ✓', 'ok');
+        setProgress(100, 'Done! ✓');
+        S.count++;
+        showResult(url, pose.n);
+        break;
+      }
+      if(poll.status === 'failed' || poll.status === 'canceled'){
+        throw new Error(`Generation ${poll.status}: ${poll.error || 'Unknown error'}`);
+      }
+    }
+
+  } catch(e){
+    log('ERROR: ' + e.message, 'err');
+    setProgress(0, 'Failed');
+    alert('Generation failed:\n\n' + e.message);
+  } finally {
+    S.running = false;
+    document.getElementById('genTxt').textContent = '⚡ GENERATE PORTRAIT';
+    checkReady();
+  }
+}
+
+function showResult(url, poseName){
+  const cards = document.getElementById('resultCards');
+  const mc = S.mode === 'fashion' ? 'rgba(0,212,255,.15)' : 'rgba(245,197,24,.15)';
+  const mt = S.mode === 'fashion' ? 'var(--cyan)' : 'var(--gold)';
+  const card = document.createElement('div');
+  card.className = 'result-card';
+  card.innerHTML = `
+    <div class="rc-hdr">
+      <div class="rc-num">Result #${S.count}</div>
+      <div class="rc-mode" style="background:${mc};color:${mt};">${S.mode.toUpperCase()} — ${poseName}</div>
+      <div class="rc-actions">
+        <a href="${url}" target="_blank" class="rc-btn">↓ Download</a>
+        <button class="rc-btn" onclick="navigator.clipboard.writeText('${url}').then(()=>alert('Link copied!'))">Copy Link</button>
+      </div>
+    </div>
+    <div class="compare">
+      <div class="compare-side">
+        <img src="${S.personB64}" alt="Original">
+        <div class="compare-lbl" style="color:var(--muted);">ORIGINAL</div>
+      </div>
+      <div class="compare-side">
+        <img src="${url}" alt="AI Result">
+        <div class="compare-lbl" style="color:var(--green);">AI PORTRAIT</div>
+      </div>
+    </div>`;
+  cards.insertBefore(card, cards.firstChild);
+}
+
+// PWA Install
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBar').classList.add('show');
+});
+function installApp() {
+  if(deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => {
+      deferredPrompt = null;
+      document.getElementById('installBar').classList.remove('show');
+    });
+  }
+}
+function closeInstall() {
+  document.getElementById('installBar').classList.remove('show');
+}
+window.addEventListener('appinstalled', () => {
+  document.getElementById('installBar').classList.remove('show');
+});
+
+</script>
+</body>
+</html>
